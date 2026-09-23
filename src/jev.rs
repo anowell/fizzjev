@@ -121,6 +121,9 @@ pub struct Response {
     pub answers: BTreeMap<String, Answer>,
     #[serde(default)]
     pub usage: Usage,
+    /// Attempts beyond the first, from 429/529/5xx or transport errors.
+    #[serde(skip)]
+    pub retries: u32,
 }
 
 #[derive(Serialize)]
@@ -174,7 +177,12 @@ impl Client {
 
             match resp {
                 Ok(r) if r.status().is_success() => {
-                    return r.json::<Response>().await.context("decoding Jev response");
+                    let mut resp = r
+                        .json::<Response>()
+                        .await
+                        .context("decoding Jev response")?;
+                    resp.retries = attempt - 1;
+                    return Ok(resp);
                 }
                 Ok(r)
                     if attempt < MAX_ATTEMPTS

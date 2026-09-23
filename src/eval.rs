@@ -54,15 +54,17 @@ pub fn render(reports: &[Report], ctx: &Context) -> String {
     let multi = ctx.data.len() > 1;
 
     let tokens: u64 = reports.iter().map(Report::tokens).sum();
+    let retries: u32 = reports.iter().map(Report::retries).sum();
     let secs: f64 = reports.iter().map(|r| r.elapsed.as_secs_f64()).sum();
     let _ = writeln!(
         out,
-        "model {} · n = {}..={} · {} runs · {} tokens · {:.0}s{}",
+        "model {} · n = {}..={} · {} runs · {} tokens · {} retries · {:.0}s{}",
         ctx.model,
         ctx.from,
         ctx.to,
         reports.len(),
         tokens,
+        retries,
         secs,
         if ctx.examples > 0 {
             format!(" · {} solved examples in state", ctx.examples)
@@ -233,6 +235,7 @@ struct RunDump<'a> {
     correct: usize,
     total: usize,
     tokens: u64,
+    retries: u32,
     secs: f64,
     per_class: BTreeMap<&'static str, (usize, usize)>,
     rows: &'a [crate::Row],
@@ -269,6 +272,7 @@ pub fn to_json(reports: &[Report], ctx: &Context) -> Result<String> {
             correct: r.correct(),
             total: r.rows.len(),
             tokens: r.tokens(),
+            retries: r.retries(),
             secs: r.elapsed.as_secs_f64(),
             per_class: per_class(r),
             rows: &r.rows,

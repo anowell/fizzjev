@@ -124,7 +124,7 @@ struct JevOpts {
     examples: usize,
 
     /// Concurrent requests in flight
-    #[arg(long, default_value_t = 16)]
+    #[arg(long, default_value_t = 64)]
     concurrency: usize,
 
     #[arg(long, default_value = "jev-latest")]
@@ -139,6 +139,7 @@ pub struct Row {
     pub correct: bool,
     pub notes: String,
     pub tokens: u64,
+    pub retries: u32,
     /// Raw Jev answers, kept for tracing.
     pub answers: serde_json::Value,
 }
@@ -171,6 +172,9 @@ impl Report {
     }
     pub fn tokens(&self) -> u64 {
         self.rows.iter().map(|r| r.tokens).sum()
+    }
+    pub fn retries(&self) -> u32 {
+        self.rows.iter().map(|r| r.retries).sum()
     }
 }
 
@@ -342,14 +346,14 @@ async fn run(
             let strategy = Arc::clone(&strategy);
             let questions = Arc::clone(&questions);
             async move {
-                let (answers, tokens) = match client.filter(|_| !questions.is_empty()) {
+                let (answers, tokens, retries) = match client.filter(|_| !questions.is_empty()) {
                     Some(client) => {
                         let state =
                             strategies::build_state(strategy.as_ref(), data, bits, n, examples);
                         let resp = client.ask(&state, &questions).await?;
-                        (resp.answers, resp.usage.total())
+                        (resp.answers, resp.usage.total(), resp.retries)
                     }
-                    None => (Default::default(), 0),
+                    None => (Default::default(), 0, 0),
                 };
                 let verdict = strategy.decide(n, &answers)?;
                 let expected = classic::fizzbuzz(n);
@@ -360,6 +364,7 @@ async fn run(
                     got: verdict.output,
                     notes: verdict.notes,
                     tokens,
+                    retries,
                     answers: serde_json::to_value(&answers)?,
                 })
             }
@@ -401,13 +406,15 @@ fn print_row(row: &Row, verbose: bool) {
 fn print_summary(report: &Report) {
     println!();
     println!(
-        "{} ({}): {}/{} correct ({:.1}%) · {} tokens · {:.1}s",
+        "{} ({}): {}/{} correct ({:.1}%) · {} tokens · {} retries · {:.1}s · {:.0} req/s",
         report.strategy,
         report.data,
         report.correct(),
         report.rows.len(),
         report.accuracy() * 100.0,
         report.tokens(),
-        report.elapsed.as_secs_f64()
+        report.retries(),
+        report.elapsed.as_secs_f64(),
+        report.rows.len() as f64 / report.elapsed.as_secs_f64().max(0.001)
     );
 }
