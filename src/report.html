@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FizzBuzz eval</title>
+<style>
+  :root {
+    color-scheme: light;
+    --surface: #fcfcfb;
+    --surface-2: #f0efec;
+    --line: #dedcd6;
+    --text: #0b0b0b;
+    --text-2: #52514e;
+    --text-3: #8a8983;
+    --k-yn: #2a78d6;
+    --k-choice: #eb6834;
+    --k-score: #1baf7a;
+    --k-baseline: #9b9a94;
+    --wrong: #e34948;
+    --ok-cell: #e4e2dc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --surface: #1a1a19;
+      --surface-2: #262624;
+      --line: #383835;
+      --text: #ffffff;
+      --text-2: #c3c2b7;
+      --text-3: #8b8a83;
+      --k-yn: #3987e5;
+      --k-choice: #d95926;
+      --k-score: #199e70;
+      --k-baseline: #8a8a84;
+      --wrong: #e66767;
+      --ok-cell: #333330;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --surface: #1a1a19;
+    --surface-2: #262624;
+    --line: #383835;
+    --text: #ffffff;
+    --text-2: #c3c2b7;
+    --text-3: #8b8a83;
+    --k-yn: #3987e5;
+    --k-choice: #d95926;
+    --k-score: #199e70;
+    --k-baseline: #8a8a84;
+    --wrong: #e66767;
+    --ok-cell: #333330;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--surface); color: var(--text); }
+  body {
+    font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    padding: 28px 16px 48px;
+  }
+  main { max-width: 1080px; margin: 0 auto; }
+  h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--text-2); margin: 0 0 10px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 14px; color: var(--text-2); font-size: 13px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+
+  .filters { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; margin: 0 0 18px; font-size: 13px; }
+  .filters .group { display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  .filters .group b { color: var(--text-3); font-weight: 500; margin-right: 2px; }
+  .chip { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 3px 10px; font: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .chip.off { color: var(--text-3); text-decoration: line-through; }
+  .chip.off .dot { opacity: .3; }
+  .chip:hover { background: var(--surface-2); }
+  .spacer { flex: 1; }
+  body.clean .filters, body.clean .hint { display: none; }
+
+  .board { display: grid; grid-template-columns: 190px minmax(240px, 1fr) minmax(220px, 0.9fr); column-gap: 18px; row-gap: 0; }
+  .hdr { color: var(--text-3); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding: 0 0 6px; border-bottom: 1px solid var(--line); }
+  .row { display: contents; }
+  .row > div { padding: 9px 0; border-bottom: 1px solid var(--line); }
+  .row.baseline .name b { color: var(--text-2); }
+  .name b { display: block; font-weight: 600; cursor: pointer; }
+  .name b:hover { text-decoration: underline dotted; }
+  .name small { color: var(--text-2); display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+  .q { color: var(--text-2); font-size: 13px; }
+  .bars { display: flex; flex-direction: column; gap: 5px; justify-content: center; }
+  .bar { display: grid; grid-template-columns: auto 1fr 52px; align-items: center; gap: 8px; }
+  .bar .dl { font-size: 11px; color: var(--text-3); width: 46px; text-align: right; }
+  .bar .dl:empty { width: 0; }
+  .track { position: relative; height: 14px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+  .track .tick { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+  .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 0 4px 4px 0; }
+  .fill.thin { opacity: .55; }
+  .row.baseline .fill { background-image: repeating-linear-gradient(135deg, transparent 0 4px, rgba(255,255,255,.45) 4px 6px); }
+  .val { font-variant-numeric: tabular-nums; text-align: right; }
+  .pc { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; font-size: 11px; color: var(--text-3); margin-top: 2px; }
+  .pc div { display: grid; grid-template-columns: auto 1fr; gap: 6px; align-items: center; }
+  .pc span { white-space: nowrap; min-width: 88px; }
+  .pc .track { height: 6px; }
+
+  h2 { font-size: 16px; margin: 28px 0 8px; }
+  .hint { color: var(--text-3); font-size: 12px; margin: 0 0 10px; }
+  .map { display: grid; grid-template-columns: 190px 1fr; column-gap: 18px; row-gap: 6px; align-items: center; }
+  .map .lab { font-size: 13px; }
+  .map .lab small { color: var(--text-3); }
+  .map canvas { width: 100%; height: 14px; display: block; border-radius: 3px; cursor: crosshair; }
+  #tip { position: fixed; pointer-events: none; background: var(--text); color: var(--surface); padding: 6px 8px; border-radius: 6px; font-size: 12px; max-width: 360px; display: none; z-index: 10; white-space: pre-wrap; }
+  .foot { color: var(--text-3); font-size: 12px; margin-top: 26px; }
+  .empty { color: var(--text-3); padding: 20px 0; grid-column: 1 / -1; }
+  @media (max-width: 720px) {
+    .board { grid-template-columns: 1fr; }
+    .hdr { display: none; }
+    .row > div { border-bottom: 0; padding: 4px 0; }
+    .row > div:last-child { border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+    .map { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <h1>FizzBuzz, evaluated</h1>
+  <p class="sub" id="sub"></p>
+  <div class="legend" id="legend"></div>
+  <div class="filters" id="filters"></div>
+  <div class="board" id="board"></div>
+  <section id="mapsec" hidden>
+    <h2>Failure map</h2>
+    <p class="hint">One cell per number, left to right. Red is a wrong answer. Hover for what the model said.</p>
+    <div class="map" id="map"></div>
+  </section>
+  <p class="foot" id="foot"></p>
+</main>
+<div id="tip"></div>
+<script>
+const DATA = /*__DATA__*/null;
+
+const KIND = {
+  key: k => k.startsWith('y/n') ? 'yn' : k.startsWith('choice') ? 'choice' : k === 'score' ? 'score' : 'baseline',
+  name: { yn: 'yes/no (noul)', choice: 'choice', score: 'score', baseline: 'baseline (no model)' },
+};
+const FAMILY_NAME = { baseline: 'baselines', phrasing: 'yes/no phrasing', choice: 'four-way choice', outsource: 'outsourced arithmetic' };
+const CLASSES = ['number', 'Fizz', 'Buzz', 'FizzBuzz'];
+
+const strategies = DATA.strategies.filter((s, i, a) => a.findIndex(x => x.name === s.name) === i);
+const byName = Object.fromEntries(strategies.map(s => [s.name, s]));
+const runs = DATA.runs;
+const forms = DATA.data;
+const kindsPresent = ['yn', 'choice', 'score', 'baseline'].filter(k => strategies.some(s => KIND.key(s.kind) === k));
+const familiesPresent = [...new Set(strategies.map(s => s.family))];
+
+const state = {
+  kinds: new Set(kindsPresent),
+  families: new Set(familiesPresent),
+  data: new Set(forms),
+  hidden: new Set(),
+  perClass: false,
+  map: false,
+};
+
+const fmtPct = x => (x * 100).toFixed(1) + '%';
+const fmtK = n => n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+function header() {
+  const tokens = runs.reduce((a, r) => a + r.tokens, 0);
+  const secs = runs.reduce((a, r) => a + r.secs, 0);
+  const parts = [
+    `model ${DATA.model}`,
+    `n = ${DATA.from}..=${DATA.to}`,
+    `${strategies.filter(s => s.family !== 'baseline').length} strategies + ${strategies.filter(s => s.family === 'baseline').length} baselines`,
+    forms.length > 1 ? `${forms.length} data forms` : null,
+    DATA.examples ? `${DATA.examples} solved examples in state` : null,
+    `${fmtK(tokens)} tokens`,
+    `${Math.round(secs)}s`,
+  ].filter(Boolean);
+  document.getElementById('sub').textContent = parts.join(' · ');
+  document.getElementById('legend').innerHTML = kindsPresent
+    .map(k => `<span><i class="dot" style="background:var(--k-${k})"></i>${KIND.name[k]}</span>`).join('');
+  const d = new Date(DATA.generated_unix * 1000);
+  document.getElementById('foot').textContent =
+    `Generated ${d.toISOString().replace('T', ' ').slice(0, 16)} UTC · fizzjev · every decision is in results/latest.json`;
+}
+
+function chip(label, on, onclick, dotVar) {
+  const b = document.createElement('button');
+  b.className = 'chip' + (on ? '' : ' off');
+  b.innerHTML = (dotVar ? `<i class="dot" style="background:var(--k-${dotVar})"></i>` : '') + esc(label);
+  b.onclick = onclick;
+  return b;
+}
+
+function filters() {
+  const f = document.getElementById('filters');
+  f.innerHTML = '';
+  const group = (title, items) => {
+    const g = document.createElement('div');
+    g.className = 'group';
+    g.innerHTML = `<b>${title}</b>`;
+    items.forEach(el => g.appendChild(el));
+    f.appendChild(g);
+  };
+  group('asks', kindsPresent.map(k => chip(KIND.name[k], state.kinds.has(k), () => { toggle(state.kinds, k); render(); }, k)));
+  group('family', familiesPresent.map(fa => chip(FAMILY_NAME[fa] || fa, state.families.has(fa), () => { toggle(state.families, fa); render(); })));
+  if (forms.length > 1) {
+    group('data', forms.map(d => chip(d, state.data.has(d), () => { toggle(state.data, d); render(); })));
+  }
+  group('show', [
+    chip('per-class', state.perClass, () => { state.perClass = !state.perClass; render(); }),
+    chip('failure map', state.map, () => { state.map = !state.map; render(); }),
+  ]);
+  const sp = document.createElement('div'); sp.className = 'spacer'; f.appendChild(sp);
+  if (state.hidden.size) {
+    f.appendChild(chip(`unhide ${state.hidden.size}`, true, () => { state.hidden.clear(); render(); }));
+  }
+  f.appendChild(chip('screenshot mode', false, () => { document.body.classList.add('clean'); }));
+}
+
+function toggle(set, v) { set.has(v) ? set.delete(v) : set.add(v); }
+
+function visibleRuns(s) {
+  return forms.filter(d => state.data.has(d))
+    .map(d => runs.find(r => r.strategy === s.name && r.data === d))
+    .filter(Boolean);
+}
+
+function ticks() {
+  return [25, 50, 75].map(p => `<i class="tick" style="left:${p}%"></i>`).join('');
+}
+
+function barHtml(r, multi, thin) {
+  const s = byName[r.strategy];
+  const k = KIND.key(s.kind);
+  const title = CLASSES.map(c => `${c} ${r.per_class[c][0]}/${r.per_class[c][1]}`).join(' · ') + ` · ${fmtK(r.tokens)} tokens`;
+  let h = `<div class="bar" title="${esc(title)}">
+    <span class="dl">${multi ? esc(r.data) : ''}</span>
+    <div class="track">${ticks()}<div class="fill${thin ? ' thin' : ''}" style="width:${(r.accuracy * 100).toFixed(2)}%;background:var(--k-${k})"></div></div>
+    <span class="val">${fmtPct(r.accuracy)}</span>
+  </div>`;
+  if (state.perClass) {
+    h += `<div class="pc">` + CLASSES.map(c => {
+      const [ok, n] = r.per_class[c];
+      const w = n ? (ok / n * 100).toFixed(1) : 0;
+      return `<div><span>${c} ${ok}/${n}</span><div class="track"><div class="fill" style="width:${w}%;background:var(--k-${k})"></div></div></div>`;
+    }).join('') + `</div>`;
+  }
+  return h;
+}
+
+function board() {
+  const b = document.getElementById('board');
+  const multi = state.data.size > 1;
+  const rows = strategies
+    .filter(s => state.kinds.has(KIND.key(s.kind)) && state.families.has(s.family) && !state.hidden.has(s.name))
+    .map(s => ({ s, rs: visibleRuns(s) }))
+    .filter(x => x.rs.length)
+    .sort((a, b) => b.rs[0].accuracy - a.rs[0].accuracy);
+
+  let h = `<div class="hdr">strategy</div><div class="hdr">accuracy on ${DATA.from}..=${DATA.to}</div><div class="hdr">what it asks Jev</div>`;
+  if (!rows.length) h += `<div class="empty">Nothing to show. Turn some chips back on.</div>`;
+  for (const { s, rs } of rows) {
+    const k = KIND.key(s.kind);
+    h += `<div class="row ${k === 'baseline' ? 'baseline' : ''}">
+      <div class="name"><b data-hide="${esc(s.name)}" class="mono">${esc(s.name)}</b>
+        <small><i class="dot" style="background:var(--k-${k})"></i>${esc(s.kind)}</small></div>
+      <div class="bars">${rs.map((r, i) => barHtml(r, multi, i > 0)).join('')}</div>
+      <div class="q">${esc(s.label)}</div>
+    </div>`;
+  }
+  b.innerHTML = h;
+  b.querySelectorAll('[data-hide]').forEach(el => el.onclick = () => { state.hidden.add(el.dataset.hide); render(); });
+  return rows;
+}
+
+function failureMap(rows) {
+  const sec = document.getElementById('mapsec');
+  sec.hidden = !state.map;
+  const m = document.getElementById('map');
+  m.innerHTML = '';
+  if (!state.map) return;
+  for (const { s, rs } of rows) {
+    for (const r of rs) {
+      const lab = document.createElement('div');
+      lab.className = 'lab';
+      lab.innerHTML = `<span class="mono">${esc(s.name)}</span> <small>${rs.length > 1 ? esc(r.data) + ' · ' : ''}${r.total - r.correct} wrong</small>`;
+      const c = document.createElement('canvas');
+      c.dataset.run = runs.indexOf(r);
+      m.appendChild(lab); m.appendChild(c);
+    }
+  }
+  drawMaps();
+}
+
+function drawMaps() {
+  const wrong = getComputedStyle(document.documentElement).getPropertyValue('--wrong').trim();
+  const ok = getComputedStyle(document.documentElement).getPropertyValue('--ok-cell').trim();
+  document.querySelectorAll('#map canvas').forEach(c => {
+    const r = runs[c.dataset.run];
+    const dpr = window.devicePixelRatio || 1;
+    const w = c.clientWidth, hgt = 14;
+    c.width = Math.round(w * dpr); c.height = Math.round(hgt * dpr);
+    const ctx = c.getContext('2d');
+    ctx.scale(dpr, dpr);
+    const n = r.rows.length, cw = w / n;
+    ctx.fillStyle = ok; ctx.fillRect(0, 0, w, hgt);
+    ctx.fillStyle = wrong;
+    r.rows.forEach((row, i) => { if (!row.correct) ctx.fillRect(i * cw, 0, Math.max(cw - (cw > 3 ? 1 : 0), 0.5), hgt); });
+    c.onmousemove = e => {
+      const i = Math.min(n - 1, Math.max(0, Math.floor((e.offsetX / w) * n)));
+      const row = r.rows[i];
+      tip(e, `n = ${row.n}\nexpected ${row.expected}, got ${row.got}${row.correct ? ' ✓' : ' ✗'}\n${row.notes}`);
+    };
+    c.onmouseleave = () => document.getElementById('tip').style.display = 'none';
+  });
+}
+
+function tip(e, text) {
+  const t = document.getElementById('tip');
+  t.textContent = text;
+  t.style.display = 'block';
+  const x = Math.min(e.clientX + 14, window.innerWidth - t.offsetWidth - 8);
+  t.style.left = x + 'px';
+  t.style.top = (e.clientY + 14) + 'px';
+}
+
+function render() {
+  filters();
+  const rows = board();
+  failureMap(rows);
+}
+
+// Presets from the URL hash, e.g. #perclass,map,clean,data=number,hide=random+vibes
+function applyHash() {
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h) return;
+  for (const part of h.split(',')) {
+    const [k, v] = part.split('=');
+    if (k === 'perclass') state.perClass = true;
+    else if (k === 'map') state.map = true;
+    else if (k === 'clean') document.body.classList.add('clean');
+    else if (k === 'data' && v) state.data = new Set(v.split('+').filter(d => forms.includes(d)));
+    else if (k === 'hide' && v) v.split('+').forEach(n => state.hidden.add(n));
+    else if (k === 'nobase') state.families.delete('baseline');
+  }
+}
+
+header();
+applyHash();
+render();
+window.addEventListener('resize', drawMaps);
+window.addEventListener('hashchange', () => { location.reload(); });
+</script>
+</body>
+</html>
